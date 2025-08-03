@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlashConnect Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f3f4f6;
+        }
+        .search-container {
+            position: relative;
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+            z-index: 10;
+            max-height: 20rem;
+            overflow-y: auto;
+            margin-top: 0.5rem;
+        }
+        .chat-card {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background: white;
+            max-width: 500px;
+        }
+        .chat-header {
+            font-weight: 600;
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .chat-messages {
+            min-height: 80px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            margin-bottom: 0.75rem;
+            background-color: #f9fafb;
+        }
+        .chat-message {
+            margin-bottom: 0.5rem;
+        }
+        .error-message {
+            background-color: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+        }
+        .button-primary {
+            background-color: #3b82f6; /* Blue-600 */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .button-primary:hover {
+            background-color: #2563eb; /* Blue-700 */
+        }
+        .button-danger {
+            background-color: #ef4444; /* Red-500 */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .button-danger:hover {
+            background-color: #dc2626; /* Red-600 */
+        }
+        .message-bubble {
+            padding: 8px 12px;
+            border-radius: 1rem;
+            word-wrap: break-word;
+            max-width: 75%;
+        }
+        .message-bubble.sent {
+            background-color: #3b82f6;
+            color: white;
+            align-self: flex-end;
+        }
+        .message-bubble.received {
+            background-color: #e2e8f0;
+            color: black;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+
+<div class="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-lg mt-10">
+
+    <!-- Header section with title and logout button -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-center">FlashConnect Chat</h1>
+        <button id="logoutButton" class="button-danger hidden">Logout</button>
+    </div>
+
+    <!-- Login/Register Section - Visible by default -->
+    <div id="authSection">
+        <!-- Login Form -->
+        <div id="loginForm" class="p-8 bg-gray-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Login</h2>
+            <div class="mb-4">
+                <input id="loginEmailInput" type="email" placeholder="Email" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="mb-4">
+                <input id="loginPasswordInput" type="password" placeholder="Password" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <button id="loginSubmitButton" class="button-primary w-full">Log In</button>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                Don't have an account? <a href="#" id="showRegisterLink" class="text-blue-600 hover:underline">Register here</a>
+            </p>
+        </div>
+
+        <!-- Register Form (Hidden by default) -->
+        <div id="registerForm" class="p-8 bg-gray-50 rounded-lg hidden">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Register</h2>
+            <div class="mb-4">
+                <input id="registerNameInput" type="text" placeholder="Name" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="mb-4">
+                <input id="registerEmailInput" type="email" placeholder="Email" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="mb-4">
+                <input id="registerDesignationInput" type="text" placeholder="Designation" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <button id="registerSubmitButton" class="button-primary w-full">Register</button>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                Already have an account? <a href="#" id="showLoginLink" class="text-blue-600 hover:underline">Log in here</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content Section - Initially hidden -->
+    <div id="mainContent" class="hidden">
+        <!-- Debug info -->
+        <div id="debugInfo" class="mb-4 p-3 bg-gray-100 rounded text-sm text-gray-600 hidden">
+            <strong>Debug Info:</strong>
+            <div>API Base URL: <span id="debugApiUrl"></span></div>
+            <div>Current User ID: <span id="debugUserId"></span></div>
+            <div>Selected User ID: <span id="debugSelectedUserId">None</span></div>
+        </div>
+
+        <button id="toggleDebug" class="mb-4 px-3 py-1 bg-gray-200 rounded text-sm">Show Debug Info</button>
+
+        <div class="search-container">
+            <input
+                    id="searchInput"
+                    type="text"
+                    placeholder="Search persons by name or email..."
+                    class="w-full px-4 py-2 border rounded-lg"
+                    autocomplete="off"
+            />
+            <div id="searchResults" class="search-results hidden"></div>
+        </div>
+
+        <!-- Chat card -->
+        <div id="chatContainer" class="chat-card hidden">
+            <div id="chatHeader" class="chat-header"></div>
+            <div id="chatMessages" class="chat-messages flex flex-col space-y-2">
+                <div class="text-center text-gray-500 p-4">Start the conversation!</div>
+            </div>
+            <div class="flex gap-2">
+                <input
+                        type="text"
+                        id="chatInput"
+                        placeholder="Type your message here..."
+                        class="flex-1 px-3 py-2 border rounded-lg"
+                />
+                <button id="sendButton" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Message Box for Alerts (No alert() calls) -->
+<div id="message-box" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg p-6 shadow-2xl w-full max-w-sm text-center">
+        <p id="message-box-text" class="text-gray-800 mb-4"></p>
+        <button onclick="hideMessageBox()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">OK</button>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:8081';
+    const API_LOGIN_URL = `${API_BASE_URL}/api/users/login`;
+    const API_REGISTER_URL = `${API_BASE_URL}/api/users/register`;
+    const API_SEARCH_URL = `${API_BASE_URL}/api/users/search`;
+    const API_MESSAGES_URL = `${API_BASE_URL}/api/messages/sendMessages`;
+
+    const searchInput = document.getElementById("searchInput");
+    const searchResults = document.getElementById("searchResults");
+    const chatContainer = document.getElementById("chatContainer");
+    const chatHeader = document.getElementById("chatHeader");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatInput = document.getElementById("chatInput");
+    const sendButton = document.getElementById("sendButton");
+    const debugInfo = document.getElementById("debugInfo");
+    const toggleDebug = document.getElementById("toggleDebug");
+    const authSection = document.getElementById("authSection");
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
+    const loginSubmitButton = document.getElementById("loginSubmitButton");
+    const registerSubmitButton = document.getElementById("registerSubmitButton");
+    const showRegisterLink = document.getElementById("showRegisterLink");
+    const showLoginLink = document.getElementById("showLoginLink");
+    const logoutButton = document.getElementById("logoutButton");
+    const mainContent = document.getElementById("mainContent");
+
+    let currentUser = null;
+    let selectedUser = null;
+
+    // Utility to show custom message box
+    function showMessageBox(message) {
+        document.getElementById('message-box-text').textContent = message;
+        document.getElementById('message-box').style.display = 'flex';
+    }
+
+    // Utility to hide custom message box
+    function hideMessageBox() {
+        document.getElementById('message-box').style.display = 'none';
+    }
+
+    // Debug toggle
+    toggleDebug.addEventListener("click", () => {
+        debugInfo.classList.toggle("hidden");
+        toggleDebug.textContent = debugInfo.classList.contains("hidden") ? "Show Debug Info" : "Hide Debug Info";
+        updateDebugInfo();
+    });
+
+    function updateDebugInfo() {
+        document.getElementById("debugApiUrl").textContent = API_MESSAGES_URL;
+        document.getElementById("debugUserId").textContent = currentUser ? currentUser.id : "None";
+        document.getElementById("debugSelectedUserId").textContent = selectedUser ? selectedUser.id : "None";
+    }
+
+    // Debounce helper
+    function debounce(func, delay) {
+        let timer;
+        return function (...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    // Escape HTML for XSS protection
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Display search results with "Message" button
+    function displaySearchResults(users) {
+        if (!users.length) {
+            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">No results found.</div>';
+            searchResults.classList.remove("hidden");
+            return;
+        }
+
+        searchResults.innerHTML = "";
+        users.forEach(user => {
+            // Skip current user from results
+            if (currentUser && user.id === currentUser.id) return;
+
+            const div = document.createElement("div");
+            div.className = "px-4 py-2 hover:bg-gray-100 flex justify-between items-center cursor-pointer";
+
+            div.innerHTML = `
+                <div>
+                  <div class="font-semibold">${escapeHtml(user.name)}</div>
+                  <div class="text-sm text-gray-600">${escapeHtml(user.email)}${user.designation ? ` (${escapeHtml(user.designation)})` : ''}</div>
+                </div>
+                <button class="message-btn bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Message</button>
+            `;
+
+            // Message button event
+            div.querySelector(".message-btn").addEventListener("click", e => {
+                e.stopPropagation();
+                openChat(user);
+            });
+
+            // Optional: clicking rest of div opens chat too
+            div.addEventListener("click", () => openChat(user));
+
+            searchResults.appendChild(div);
+        });
+        searchResults.classList.remove("hidden");
+    }
+
+    // Fetch users by search query
+    async function searchUsers(query) {
+        if (!currentUser) return;
+
+        if (!query.trim()) {
+            searchResults.classList.add("hidden");
+            searchResults.innerHTML = "";
+            return;
+        }
+        searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">Searching...</div>';
+        searchResults.classList.remove("hidden");
+
+        try {
+            const response = await fetch(`${API_SEARCH_URL}?query=${encodeURIComponent(query)}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error("Search failed");
+
+            const users = await response.json();
+            displaySearchResults(users);
+        } catch (err) {
+            searchResults.innerHTML = `<div class="p-4 text-center text-red-600">Error: ${escapeHtml(err.message)}</div>`;
+        }
+    }
+
+    // Open chat UI for selected user
+    function openChat(user) {
+        selectedUser = user;
+        chatHeader.textContent = user.name;
+        chatMessages.innerHTML = '<div class="text-center text-gray-500 p-4">Start the conversation!</div>';
+        chatInput.value = "";
+        chatContainer.classList.remove("hidden");
+        searchResults.classList.add("hidden");
+        updateDebugInfo();
+    }
+
+    // Show a message in chat box
+    function addChatMessage(message, isSelf, isError = false) {
+        const div = document.createElement("div");
+        if (isError) {
+            div.className = "error-message";
+            div.innerHTML = `<strong>Error:</strong> ${escapeHtml(message)}`;
+        } else {
+            const bubbleClass = isSelf ? "sent" : "received";
+            const alignmentClass = isSelf ? "justify-end" : "justify-start";
+            div.className = `flex ${alignmentClass}`;
+            div.innerHTML = `<div class="message-bubble ${bubbleClass}">${escapeHtml(message)}</div>`;
+        }
+        // Remove "Start the conversation!" message if it exists
+        if (chatMessages.querySelector('.text-center')) {
+            chatMessages.innerHTML = '';
+        }
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Send message handler
+    async function sendMessages() {
+        const msg = chatInput.value.trim();
+        if (!msg || !selectedUser || !currentUser) {
+            if (!currentUser) {
+                showMessageBox("Please log in first.");
+            } else if (!selectedUser) {
+                showMessageBox("Please select a user to chat with first.");
+            }
+            return;
+        }
+
+        const originalMsg = msg;
+        chatInput.value = ""; // Clear input immediately
+        sendButton.disabled = true;
+        sendButton.textContent = "Sending...";
+
+        try {
+            const payload = {
+                senderId: currentUser.id,
+                recipientId: selectedUser.id,
+                content: originalMsg
+            };
+
+            const response = await fetch(API_MESSAGES_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error ${response.status}: ${errorText}`);
+            }
+
+            // On success, add the sent message to the chat display
+            addChatMessage(originalMsg, true);
+
+        } catch (error) {
+            console.error("Send message error:", error);
+
+            let errorMsg = "Failed to send message. ";
+            if (error.message.includes("Failed to fetch")) {
+                errorMsg += "Cannot connect to server. Check if the server is running on port 8081.";
+            } else if (error.message.includes("CORS")) {
+                errorMsg += "CORS error. Server needs to allow requests from this domain.";
+            } else {
+                errorMsg += error.message;
+            }
+
+            addChatMessage(errorMsg, false, true);
+            chatInput.value = originalMsg; // Put the message back in the input
+        } finally {
+            sendButton.disabled = false;
+            sendButton.textContent = "Send";
+            chatInput.focus();
+        }
+    }
+
+    // Handles user login
+    async function login() {
+        const email = document.getElementById("loginEmailInput").value;
+        const password = document.getElementById("loginPasswordInput").value;
+
+        if (!email || !password) {
+            showMessageBox("Please enter both an email and a password.");
+            return;
+        }
+
+        try {
+            const payload = {
+                email: email,
+                password: password
+            };
+
+            const response = await fetch(API_LOGIN_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Login failed: ${response.status} - ${errorText}`);
+            }
+
+            const user = await response.json();
+            currentUser = user;
+            authSection.classList.add("hidden");
+            mainContent.classList.remove("hidden");
+            logoutButton.classList.remove("hidden");
+            updateDebugInfo();
+            showMessageBox(`Logged in as ${currentUser.name}. You can now search for other users to chat with.`);
+        } catch (error) {
+            console.error("Login error:", error);
+            showMessageBox(error.message);
+        }
+    }
+
+    // Handles user registration
+    async function register() {
+        const name = document.getElementById("registerNameInput").value;
+        const email = document.getElementById("registerEmailInput").value;
+        const designation = document.getElementById("registerDesignationInput").value;
+
+        if (!name || !email || !designation) {
+            showMessageBox("Please fill in all fields to register.");
+            return;
+        }
+
+        try {
+            const payload = {
+                name: name,
+                email: email,
+                designation: designation
+            };
+
+            const response = await fetch(API_REGISTER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Registration failed: ${response.status} - ${errorText}`);
+            }
+
+            const newUser = await response.json();
+            showMessageBox(`Registration successful! Your new User ID is ${newUser.id}. Please use this ID to log in.`);
+            // Automatically switch to login form
+            showLoginLink.click();
+
+        } catch (error) {
+            console.error("Registration error:", error);
+            showMessageBox(error.message);
+        }
+    }
+
+    // Handles logout
+    function logout() {
+        currentUser = null;
+        selectedUser = null;
+        authSection.classList.remove("hidden");
+        mainContent.classList.add("hidden");
+        logoutButton.classList.add("hidden");
+        chatContainer.classList.add("hidden");
+        searchResults.classList.add("hidden");
+        searchInput.value = "";
+        updateDebugInfo();
+        showMessageBox("You have been logged out.");
+    }
+
+    // Set up event listeners
+    loginSubmitButton.addEventListener("click", login);
+    registerSubmitButton.addEventListener("click", register);
+    logoutButton.addEventListener("click", logout);
+    sendButton.addEventListener("click", sendMessages);
+    chatInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessages();
+        }
+    });
+    searchInput.addEventListener("input", debounce(e => {
+        searchUsers(e.target.value);
+    }, 300));
+    showRegisterLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        loginForm.classList.add("hidden");
+        registerForm.classList.remove("hidden");
+    });
+    showLoginLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        registerForm.classList.add("hidden");
+        loginForm.classList.remove("hidden");
+    });
+    // Initialize debug info on page load
+    updateDebugInfo();
+</script>
+
+</body>
+</html>
