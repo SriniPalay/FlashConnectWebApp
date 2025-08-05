@@ -1,10 +1,12 @@
 package org.example.dto;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.example.model.Message;
 
 import java.time.LocalDateTime;
 
+@NoArgsConstructor
 @Data
 public class MessageResponseDTO {
     private Long id;

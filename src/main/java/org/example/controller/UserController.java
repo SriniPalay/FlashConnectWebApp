@@ -7,6 +7,7 @@ import org.example.dto.LoginRequestDTO;
 import org.example.dto.UserResponseDTO;
 import org.example.model.User;
 import org.example.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor // Lombok: Injects UserService via constructor
 @CrossOrigin(origins = "*") // Allows requests from any origin (for frontend development)
 public class UserController {
+
 
     private final UserService userService; // Injected service
 
