@@ -32,4 +32,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findChatHistory(@Param("user1") Long user1, @Param("user2") Long user2);
 
 
+    List<Message> findTop3ByRecipientOrderByTimestampDesc(User recipient);
+
 }

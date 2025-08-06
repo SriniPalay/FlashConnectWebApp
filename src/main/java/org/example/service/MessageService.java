@@ -23,13 +23,8 @@ public class MessageService {
     private final UserRepository userRepository;// To fetch User entities
 
     private MessageResponseDTO convertToResponseDTO(Message message) {
-        MessageResponseDTO dto = new MessageResponseDTO();
-        dto.setId(message.getId());
-        dto.setSenderId(message.getSender().getId());
-        dto.setRecipientId(message.getRecipient().getId());
-        dto.setContent(message.getContent());
-        dto.setTimestamp(message.getTimestamp());
-        return dto;
+
+        return new MessageResponseDTO();
     }
 
     public MessageResponseDTO sendMessage(MessageRequestDTO dto) {
@@ -64,6 +59,19 @@ public class MessageService {
     }
     public long getUnreadMessageCountForUser(Long userId) {
         return messageRepository.countByRecipientIdAndIsReadFalse(userId);
+    }
+
+    public List<MessageResponseDTO> getRecentNotifications(User recipient) {
+        List<Message> recentMessages = messageRepository.findTop3ByRecipientOrderByTimestampDesc(recipient);
+
+        return recentMessages.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    private MessageResponseDTO convertToDto(Message message) {
+        // Use the new DTO constructor for clean mapping
+        return new MessageResponseDTO(message);
     }
 
 }
