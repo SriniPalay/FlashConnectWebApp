@@ -44,6 +44,7 @@ public class UserController {
             return new ResponseEntity<>(new ErrorResponse("An unexpected error occurred during registration.", HttpStatus.INTERNAL_SERVER_ERROR.value()), HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
     }
+
     @GetMapping("/{id}") // Maps GET requests to /users/{id}
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
         // Assume userService.getUserById returns UserResponseDTO directly or an Optional<User>
@@ -58,6 +59,7 @@ public class UserController {
             return ResponseEntity.notFound().build(); // 404 Not Found (user not found)
         }
     }
+
     @PostMapping("/login") // Maps POST requests to /users/login
     public ResponseEntity<?> signInUser(@RequestBody LoginRequestDTO loginRequestDTO) {
         try {
@@ -75,6 +77,7 @@ public class UserController {
             return new ResponseEntity<>(new ErrorResponse("An unexpected error occurred during login.", HttpStatus.INTERNAL_SERVER_ERROR.value()), HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
     }
+
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(@RequestParam("query") String query) {
         try {
