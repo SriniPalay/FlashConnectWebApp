@@ -19,6 +19,8 @@ public class UserResponseDTO {
     private Role role;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private long followingCount; // How many users THIS user is following
+    private long followersCount;
 
     // Constructor to convert a User entity to a UserResponseDTO
     public UserResponseDTO(User user) {
@@ -29,5 +31,8 @@ public class UserResponseDTO {
         this.role = user.getRole();
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
+        this.followersCount=0;
+        this.followingCount=0;
+
     }
 }

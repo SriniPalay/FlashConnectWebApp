@@ -1,8 +1,10 @@
 package org.example.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.model.Connection;
 import org.example.model.Role;
 import org.example.model.User;
+import org.example.repository.ConnectionRepository;
 import org.example.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,7 +22,8 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository; // Injected by Lombok's @RequiredArgsConstructor
-    private final BCryptPasswordEncoder passwordEncoder; // Injected BCryptPasswordEncoder
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final ConnectionRepository connectionRepository;// Injected BCryptPasswordEncoder
 
     public User registerNewUser(String name, String email, String password, String designation) {
         // Business logic: Check if email already exists
@@ -46,9 +49,19 @@ public class UserService {
     }
 
     public UserResponseDTO getUserById(Long id) {
-        return userRepository.findById(id)
-                .map(UserResponseDTO::new) // If User found, convert to DTO
-                .orElse(null); // If not found, return null (controller will handle 404)
+        Optional<User> userOptional = userRepository.findById(id);
+
+        if (userOptional.isEmpty()) {
+            return null;
+        }
+
+        User user = userOptional.get();
+        UserResponseDTO userResponseDTO = new UserResponseDTO(user);
+
+        // Corrected: Call the helper method here!
+        populateFollowerCounts(user, userResponseDTO);
+
+        return userResponseDTO; // If not found, return null (controller will handle 404)
     }
 
     public UserResponseDTO authenticateUser(String email, String password) {
@@ -74,5 +87,14 @@ public class UserService {
     public List<UserResponseDTO> searchUsersByName(String query) {
         List<User> users = userRepository.searchByNameOrEmail(query);
         return users.stream().map(UserResponseDTO::new).collect(Collectors.toList());
+    }
+
+    public void populateFollowerCounts(User user, UserResponseDTO dto){
+        long Followers=connectionRepository.countBySenderAndStatus(user, Connection.ConnectionStatus.ACCEPTED);
+        long Following=connectionRepository.countByReceiverAndStatus(user, Connection.ConnectionStatus.ACCEPTED);
+
+        dto.setFollowersCount(Followers);
+        dto.setFollowingCount(Following);
+
     }
 }
