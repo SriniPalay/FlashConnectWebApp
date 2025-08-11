@@ -2,6 +2,7 @@ package org.example.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.model.Connection;
+import org.example.model.ConnectionRelationStatus;
 import org.example.model.Role;
 import org.example.model.User;
 import org.example.repository.ConnectionRepository;
@@ -84,9 +85,40 @@ public class UserService {
         // Authentication successful, return the user details as DTO
         return new UserResponseDTO(user);
     }
-    public List<UserResponseDTO> searchUsersByName(String query) {
+    public List<UserResponseDTO> searchUsersByName(String query, Long requesterId) {
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new IllegalArgumentException("Requester user not found."));
+
         List<User> users = userRepository.searchByNameOrEmail(query);
-        return users.stream().map(UserResponseDTO::new).collect(Collectors.toList());
+
+        return users.stream()
+                .filter(user -> !user.getId().equals(requester.getId())) // Don't show the requester in their own search results
+                .map(user -> {
+                    UserResponseDTO dto = new UserResponseDTO(user);
+                    populateFollowerCounts(user, dto); // Populate general counts
+
+                    // Determine connection status with the requesting user
+                    Optional<Connection> connectionOptional = connectionRepository
+                            .findBySenderAndReceiverOrReceiverAndSender(requester, user, requester, user);
+
+                    if (connectionOptional.isPresent()) {
+                        Connection connection = connectionOptional.get();
+                        if (connection.getStatus() == Connection.ConnectionStatus.ACCEPTED) {
+                            dto.setConnectionStatusWithRequester(ConnectionRelationStatus.ACCEPTED);
+                        } else if (connection.getStatus() == Connection.ConnectionStatus.PENDING) {
+                            if (connection.getSender().getId().equals(requester.getId())) {
+                                dto.setConnectionStatusWithRequester(ConnectionRelationStatus.PENDING_SENT);
+                            } else {
+                                dto.setConnectionStatusWithRequester(ConnectionRelationStatus.PENDING_RECEIVED);
+                            }
+                        }
+                        // Add logic for REJECTED, BLOCKED if needed
+                    } else {
+                        dto.setConnectionStatusWithRequester(ConnectionRelationStatus.NOT_CONNECTED);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     public void populateFollowerCounts(User user, UserResponseDTO dto){

@@ -3,6 +3,7 @@ package org.example.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.example.model.ConnectionRelationStatus;
 import org.example.model.User;
 import org.example.model.Role;
 
@@ -21,6 +22,7 @@ public class UserResponseDTO {
     private LocalDateTime updatedAt;
     private long followingCount; // How many users THIS user is following
     private long followersCount;
+    private ConnectionRelationStatus connectionStatusWithRequester;
 
     // Constructor to convert a User entity to a UserResponseDTO
     public UserResponseDTO(User user) {
@@ -33,6 +35,6 @@ public class UserResponseDTO {
         this.updatedAt = user.getUpdatedAt();
         this.followersCount=0;
         this.followingCount=0;
-
+        this.connectionStatusWithRequester=ConnectionRelationStatus.NOT_CONNECTED;
     }
 }
