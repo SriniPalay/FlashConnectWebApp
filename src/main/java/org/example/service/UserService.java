@@ -105,16 +105,20 @@ public class UserService {
                         Connection connection = connectionOptional.get();
                         if (connection.getStatus() == Connection.ConnectionStatus.ACCEPTED) {
                             dto.setConnectionStatusWithRequester(ConnectionRelationStatus.ACCEPTED);
+                            dto.setPendingRequestId(null);
                         } else if (connection.getStatus() == Connection.ConnectionStatus.PENDING) {
                             if (connection.getSender().getId().equals(requester.getId())) {
                                 dto.setConnectionStatusWithRequester(ConnectionRelationStatus.PENDING_SENT);
+                                dto.setPendingRequestId(null);
                             } else {
                                 dto.setConnectionStatusWithRequester(ConnectionRelationStatus.PENDING_RECEIVED);
+                                dto.setPendingRequestId(connection.getId());
                             }
                         }
                         // Add logic for REJECTED, BLOCKED if needed
                     } else {
                         dto.setConnectionStatusWithRequester(ConnectionRelationStatus.NOT_CONNECTED);
+                        dto.setPendingRequestId(null);
                     }
                     return dto;
                 })
