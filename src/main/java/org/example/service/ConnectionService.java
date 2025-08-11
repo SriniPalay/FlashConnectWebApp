@@ -49,7 +49,23 @@ public class ConnectionService {
         return connectionRepository.findByReceiverAndStatus(user, Connection.ConnectionStatus.PENDING);
     }
 
+    public Connection rejectFriendRequest(Long requestId){
+        Connection connection = connectionRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Connection request not found."));
+
+        // 2. Check if the connection is in a PENDING state. If not, it can't be rejected.
+        if (connection.getStatus() != Connection.ConnectionStatus.PENDING) {
+            throw new IllegalStateException("Cannot reject a non-pending request.");
+        }
+
+        // 3. Update the status to REJECTED.
+        connection.setStatus(Connection.ConnectionStatus.REJECTED);
+
+        // 4. Save the updated connection back to the database.
+        return connectionRepository.save(connection);
     }
+
+}
 
 
 

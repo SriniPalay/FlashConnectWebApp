@@ -55,4 +55,17 @@ public class ConnectionController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @PutMapping("/reject/{userId}")
+    public ResponseEntity<ConnectionResponseDTO> rejectRequest(@PathVariable Long requestID){
+        try{
+            Connection rejectConnection = connectionService.rejectFriendRequest(requestID);
+            ConnectionResponseDTO connectionResponseDTO = new ConnectionResponseDTO(rejectConnection);
+            return ResponseEntity.ok(connectionResponseDTO);
+        }
+        catch (Exception e){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

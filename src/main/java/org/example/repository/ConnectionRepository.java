@@ -25,4 +25,8 @@ public interface ConnectionRepository extends JpaRepository <Connection, Long> {
     // AND the 'status' is ACCEPTED.
     long countByReceiverAndStatus(User receiver, Connection.ConnectionStatus status);
 
+    Optional<Connection> findBySenderAndReceiverOrReceiverAndSender(User user1, User user2, User user3, User user4);
+
+    // ... other existing methods (countBySenderAndStatus, countByReceiverAndStatus, etc.)
 }
+

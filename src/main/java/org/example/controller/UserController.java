@@ -78,15 +78,37 @@ public class UserController {
         }
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<?> searchUsers(@RequestParam("query") String query) {
+    @GetMapping("/search") // Maps HTTP GET requests to "/api/users/search"
+    public ResponseEntity<List<UserResponseDTO>> searchUsers(
+            @RequestParam("query") String query, // Extracts 'query' parameter from URL (e.g., ?query=John)
+            @RequestParam("requesterId") Long requesterId) { // Extracts 'requesterId' parameter (e.g., &requesterId=123)
         try {
-            List<UserResponseDTO> users = userService.searchUsersByName(query);
+            // 1. Delegate to UserService:
+            // Calls the UserService to perform the search.
+            // Importantly, it passes BOTH the search 'query' AND the 'requesterId'.
+            // The UserService will use 'requesterId' to determine the connection status
+            // between the searching user and each user found in the search results.
+            List<UserResponseDTO> users = userService.searchUsersByName(query, requesterId);
+
+            // 2. Return Success Response:
+            // If the search is successful, it returns a 200 OK status.
+            // The 'users' list (which now contains connection statuses within each DTO)
+            // is sent as the JSON body of the response.
             return ResponseEntity.ok(users);
+        } catch (IllegalArgumentException e) {
+            // 3. Handle 'Requester Not Found' Error:
+            // If the 'requesterId' itself is invalid (user doesn't exist),
+            // the UserService throws an IllegalArgumentException.
+            // The controller catches it and returns a 404 NOT FOUND status.
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception ex) {
-            // Log exception here if needed
+            // 4. Handle Generic Server Errors:
+            // Catches any other unexpected exceptions during the search process.
+            // Logs the error to the console for debugging.
+            // Returns a 500 INTERNAL SERVER ERROR status, indicating a server-side problem.
+            System.err.println("An error occurred while searching for users: " + ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An error occurred while searching for users.");
+                    .body(null); // Returns an empty body for generic error
         }
     }
 
