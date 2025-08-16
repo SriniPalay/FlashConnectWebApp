@@ -1,6 +1,7 @@
 package org.example.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.dto.CreateUserDTO;
 import org.example.model.Connection;
 import org.example.model.ConnectionRelationStatus;
 import org.example.model.Role;
@@ -26,19 +27,19 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final ConnectionRepository connectionRepository;// Injected BCryptPasswordEncoder
 
-    public User registerNewUser(String name, String email, String password, String designation) {
+    public User registerNewUser(CreateUserDTO createUserDTO) {
         // Business logic: Check if email already exists
         // Assuming findByEmail is available in UserRepository
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("User with this email already exists: " + email);
+        if (userRepository.findByEmail(createUserDTO.getEmail()).isPresent()) {
+            throw new RuntimeException("User with this email already exists: " + createUserDTO.getEmail());
         }
 
         User newUser = new User();
-        newUser.setName(name);
-        newUser.setEmail(email);
+        newUser.setName(createUserDTO.getName());
+        newUser.setEmail(createUserDTO.getEmail());
         // !!! CRITICAL FIX: HASH THE PASSWORD BEFORE SAVING !!!
-        newUser.setPassword(passwordEncoder.encode(password)); // <--- THIS IS THE REQUIRED CHANGE
-        newUser.setDesignation(designation); // Set the designation
+        newUser.setPassword(passwordEncoder.encode(createUserDTO.getPassword())); // <--- THIS IS THE REQUIRED CHANGE
+        newUser.setDesignation(createUserDTO.getDesignation()); // Set the designation
         newUser.setRole(Role.USER); // Assign default role to USER
 
         // Assuming your User entity has createdAt and updatedAt fields
@@ -105,16 +106,20 @@ public class UserService {
                         Connection connection = connectionOptional.get();
                         if (connection.getStatus() == Connection.ConnectionStatus.ACCEPTED) {
                             dto.setConnectionStatusWithRequester(ConnectionRelationStatus.ACCEPTED);
+                            dto.setPendingRequestId(null);
                         } else if (connection.getStatus() == Connection.ConnectionStatus.PENDING) {
                             if (connection.getSender().getId().equals(requester.getId())) {
                                 dto.setConnectionStatusWithRequester(ConnectionRelationStatus.PENDING_SENT);
+                                dto.setPendingRequestId(null);
                             } else {
                                 dto.setConnectionStatusWithRequester(ConnectionRelationStatus.PENDING_RECEIVED);
+                                dto.setPendingRequestId(connection.getId());
                             }
                         }
                         // Add logic for REJECTED, BLOCKED if needed
                     } else {
                         dto.setConnectionStatusWithRequester(ConnectionRelationStatus.NOT_CONNECTED);
+                        dto.setPendingRequestId(null);
                     }
                     return dto;
                 })
@@ -122,11 +127,14 @@ public class UserService {
     }
 
     public void populateFollowerCounts(User user, UserResponseDTO dto){
-        long Followers=connectionRepository.countBySenderAndStatus(user, Connection.ConnectionStatus.ACCEPTED);
-        long Following=connectionRepository.countByReceiverAndStatus(user, Connection.ConnectionStatus.ACCEPTED);
+        // A user's 'following' count is the number of connections they SENT
+        long actualFollowingCount = connectionRepository.countBySenderAndStatus(user, Connection.ConnectionStatus.ACCEPTED);
 
-        dto.setFollowersCount(Followers);
-        dto.setFollowingCount(Following);
+// A user's 'followers' count is the number of connections they RECEIVED
+        long actualFollowersCount = connectionRepository.countByReceiverAndStatus(user, Connection.ConnectionStatus.ACCEPTED);
+
+        dto.setFollowingCount(actualFollowingCount); // Now correctly sets 'following'
+        dto.setFollowersCount(actualFollowersCount); // Now correctly sets 'followers'
 
     }
 }

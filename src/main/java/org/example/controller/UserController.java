@@ -5,7 +5,9 @@ import org.example.dto.CreateUserDTO;
 import org.example.controller.ErrorResponse;
 import org.example.dto.LoginRequestDTO;
 import org.example.dto.UserResponseDTO;
+import org.example.model.Connection;
 import org.example.model.User;
+import org.example.service.ConnectionService;
 import org.example.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,18 +22,15 @@ import java.util.List;
 @CrossOrigin(origins = "*") // Allows requests from any origin (for frontend development)
 public class UserController {
 
-
-    private final UserService userService; // Injected service
+    private final UserService userService;
+    private final ConnectionService connectionService;// Injected service
 
     @PostMapping("/register") // Maps POST requests to /api/users/register
     public ResponseEntity<?> registerUser(@RequestBody CreateUserDTO createUserDTO) {
         try {
             // Call the service layer to register the new user
             User createdUser = userService.registerNewUser(
-                    createUserDTO.getName(),
-                    createUserDTO.getEmail(),
-                    createUserDTO.getPassword(),
-                    createUserDTO.getDesignation() // Pass designation from DTO
+                    createUserDTO // Pass designation from DTO
             );
 
             // Return a UserResponseDTO to the client (excludes sensitive info like password)
@@ -89,6 +88,7 @@ public class UserController {
             // The UserService will use 'requesterId' to determine the connection status
             // between the searching user and each user found in the search results.
             List<UserResponseDTO> users = userService.searchUsersByName(query, requesterId);
+
 
             // 2. Return Success Response:
             // If the search is successful, it returns a 200 OK status.
