@@ -57,9 +57,9 @@ public class ConnectionController {
     }
 
     @PutMapping("/reject/{userId}")
-    public ResponseEntity<ConnectionResponseDTO> rejectRequest(@PathVariable Long requestID){
+    public ResponseEntity<ConnectionResponseDTO> rejectRequest(@PathVariable Long userId){
         try{
-            Connection rejectConnection = connectionService.rejectFriendRequest(requestID);
+            Connection rejectConnection = connectionService.rejectFriendRequest(userId);
             ConnectionResponseDTO connectionResponseDTO = new ConnectionResponseDTO(rejectConnection);
             return ResponseEntity.ok(connectionResponseDTO);
         }

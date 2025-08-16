@@ -22,7 +22,6 @@ import java.util.List;
 @CrossOrigin(origins = "*") // Allows requests from any origin (for frontend development)
 public class UserController {
 
-
     private final UserService userService;
     private final ConnectionService connectionService;// Injected service
 
@@ -31,10 +30,7 @@ public class UserController {
         try {
             // Call the service layer to register the new user
             User createdUser = userService.registerNewUser(
-                    createUserDTO.getName(),
-                    createUserDTO.getEmail(),
-                    createUserDTO.getPassword(),
-                    createUserDTO.getDesignation() // Pass designation from DTO
+                    createUserDTO // Pass designation from DTO
             );
 
             // Return a UserResponseDTO to the client (excludes sensitive info like password)
