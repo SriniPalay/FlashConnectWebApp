@@ -8,14 +8,18 @@ import org.example.model.Role;
 import org.example.model.User;
 import org.example.repository.ConnectionRepository;
 import org.example.repository.UserRepository;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.example.dto.UserResponseDTO;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.mail.javamail.JavaMailSender;
 
 import java.time.LocalDateTime; // Added for completeness if createdAt/updatedAt are used
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service // Marks this class as a Spring service component
@@ -26,7 +30,7 @@ public class UserService {
     private final UserRepository userRepository; // Injected by Lombok's @RequiredArgsConstructor
     private final BCryptPasswordEncoder passwordEncoder;
     private final ConnectionRepository connectionRepository;// Injected BCryptPasswordEncoder
-
+    private final JavaMailSender mailSender;
     public User registerNewUser(CreateUserDTO createUserDTO) {
         // Business logic: Check if email already exists
         // Assuming findByEmail is available in UserRepository
@@ -85,6 +89,72 @@ public class UserService {
 
         // Authentication successful, return the user details as DTO
         return new UserResponseDTO(user);
+    }
+
+    // UPDATED: Method to initiate password reset using a 6-digit code
+    public String generatePasswordResetToken(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found for email: " + email));
+
+        // Generate a 6-digit numeric code
+        Random random = new Random();
+        String verificationCode = String.format("%06d", random.nextInt(1000000)); // Ensures 6 digits, e.g., 001234
+
+        // Set expiry for 10 minutes from now (shorter for codes)
+        LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(10);
+
+        user.setResetToken(verificationCode); // Store the 6-digit code as the reset token
+        user.setTokenExpiry(expiryDate);
+        userRepository.save(user); // Save the user with the new code and expiry
+
+        // Send the real email with the code
+        sendPasswordResetEmail(user.getEmail(), verificationCode);
+        return "A 6-digit verification code has been sent to your email.";
+    }
+
+    // UPDATED: Method to reset the password using the email and 6-digit code
+    public void resetPassword(String email, String verificationCode, String newPassword) {
+        User user = userRepository.findByEmail(email) // Find by email first
+                .orElseThrow(() -> new IllegalArgumentException("User not found for email."));
+
+        // Validate the code and expiry
+        if (user.getResetToken() == null || !user.getResetToken().equals(verificationCode) ||
+                user.getTokenExpiry() == null || user.getTokenExpiry().isBefore(LocalDateTime.now())) {
+
+            // Invalidate token regardless of match to prevent brute-forcing attempts
+            user.setResetToken(null);
+            user.setTokenExpiry(null);
+            userRepository.save(user); // Save to clear invalid/expired token
+            throw new IllegalArgumentException("Invalid or expired verification code.");
+        }
+
+        // Reset the password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null); // Invalidate code after use
+        user.setTokenExpiry(null);
+        userRepository.save(user); // Save the new hashed password and clear the token fields
+    }
+
+    // UPDATED: Now sends a real email with the 6-digit code
+    private void sendPasswordResetEmail(String email, String verificationCode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("noreply@flashconnect.com"); // Your application's email address (must match spring.mail.username)
+        message.setTo(email);
+        message.setSubject("FlashConnect: Password Reset Verification Code");
+        // Email content now includes the 6-digit code directly
+        message.setText("Dear User,\n\n"
+                + "You have requested to reset your password for your FlashConnect account.\n"
+                + "Your 6-digit verification code is: " + verificationCode + "\n\n"
+                + "Please enter this code on the password reset page to set your new password.\n"
+                + "This code will expire in 10 minutes.\n"
+                + "If you did not request a password reset, please ignore this email.\n\n"
+                + "FlashConnect Team");
+        try {
+            mailSender.send(message);
+            System.out.println("Password reset email with code sent to: " + email);
+        } catch (Exception e) {
+            System.err.println("Failed to send password reset email to " + email + ": " + e.getMessage());
+        }
     }
     public List<UserResponseDTO> searchUsersByName(String query, Long requesterId) {
         User requester = userRepository.findById(requesterId)

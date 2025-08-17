@@ -31,7 +31,15 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String designation; // New field for user's designation
+    private String designation;
+
+    @Column(name="ResetToken", nullable = true)
+    private String resetToken;
+
+    @Column(name="ResetTokenExpiry")
+    private LocalDateTime TokenExpiry;
+
+    // New field for user's designation
 
     @Enumerated(EnumType.STRING) // Stores enum as String in DB ("USER", "ADMIN")
     @Column(nullable = false)
