@@ -5,6 +5,8 @@ import org.example.dto.CreateUserDTO;
 import org.example.controller.ErrorResponse;
 import org.example.dto.LoginRequestDTO;
 import org.example.dto.UserResponseDTO;
+import org.example.dto.ResetPasswordRequestDTO;
+import org.example.dto.ForgotPasswordRequestDTO;
 import org.example.model.Connection;
 import org.example.model.User;
 import org.example.service.ConnectionService;
@@ -109,6 +111,32 @@ public class UserController {
             System.err.println("An error occurred while searching for users: " + ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null); // Returns an empty body for generic error
+        }
+    }
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody ForgotPasswordRequestDTO requestDTO) {
+        try {
+            String message = userService.generatePasswordResetToken(requestDTO.getEmail());
+            return ResponseEntity.ok(message);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(new ErrorResponse(e.getMessage(), HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            System.err.println("Error requesting password reset: " + e.getMessage());
+            return new ResponseEntity<>(new ErrorResponse("Failed to process password reset request.", HttpStatus.INTERNAL_SERVER_ERROR.value()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // UPDATED ENDPOINT: Reset password using email, 6-digit code, and new password
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDTO requestDTO) {
+        try {
+            userService.resetPassword(requestDTO.getEmail(), requestDTO.getVerificationCode(), requestDTO.getNewPassword());
+            return ResponseEntity.ok("Password reset successfully.");
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            System.err.println("Error resetting password: " + e.getMessage());
+            return new ResponseEntity<>(new ErrorResponse("Failed to reset password.", HttpStatus.INTERNAL_SERVER_ERROR.value()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
