@@ -22,6 +22,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+//Need to update few changes.
 @Service // Marks this class as a Spring service component
 @Transactional // Ensures methods are executed within a transaction
 @RequiredArgsConstructor // Lombok: Creates a constructor for final fields (UserRepository, BCryptPasswordEncoder)
